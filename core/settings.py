@@ -142,15 +142,11 @@ CELERY_TIMEZONE = "UTC"
 
 
 REST_FRAMEWORK = {
-    # Вимикаємо обов'язкову перевірку токенів
     'DEFAULT_AUTHENTICATION_CLASSES': [],
-    
-    # Дозволяємо доступ будь-кому (навіть неавторизованим)
+    'COERCE_DECIMAL_TO_STRING': False,
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
-    
-    # Swagger (drf-spectacular) залишаємо для документації
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
