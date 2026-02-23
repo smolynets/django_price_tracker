@@ -1,6 +1,8 @@
 import requests
 from datetime import datetime
 
+from tasks_app.models import CurrencyRate
+
 URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json"
 
 def get_rates():
@@ -11,20 +13,10 @@ def get_rates():
     rates = {}
     for currency in data:
         if currency["cc"] in ("USD", "EUR"):
-            rates[currency["cc"]] = {
-                "rate": currency["rate"],
-                "date": currency["exchangedate"]
-            }
-    import pdb;pdb.set_trace()
+            CurrencyRate.objects.update_or_create(
+                title=currency["cc"],
+                rate_date=currency['exchangedate'],
+                defaults={'rate': currency["rate"]}
+            )
 
     return rates
-
-if __name__ == "__main__":
-    rates = get_rates()
-
-    print("Офіційний курс НБУ:")
-    for code in ("USD", "EUR"):
-        if code in rates:
-            print(f"{code}: {rates[code]['rate']} грн (дата: {rates[code]['date']})")
-        else:
-            print(f"{code}: не знайдено")
