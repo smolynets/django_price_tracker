@@ -1,5 +1,7 @@
 from django.db.models import Min, Max, OuterRef, Subquery, Avg, F
 from rest_framework import generics
+from django.utils import timezone
+from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework.views import APIView
@@ -40,7 +42,7 @@ class CurrencyRateListView(generics.ListAPIView):
                 description='Sort by price',
                 required=False,
                 type=str,
-                enum=['price', '-price'],
+                enum=['price', '-price', 'trend', '-trend'],
             )
         ]
     )
@@ -54,16 +56,46 @@ class ProductListView(generics.ListAPIView):
         return context
 
     def get_queryset(self):
+        """
+        Prepares a queryset of products with annotated current price and 30-day trend.
+        
+        This method performs the following:
+        1. Subqueries the latest price from ProductPriceRecord for each product.
+        2. Calculates the average price over the last 30 days using a subquery.
+        3. Annotates each product with 'latest_price' and 'price_trend' (current - average).
+        4. Handles dynamic sorting based on 'ordering' parameter:
+        - 'price'/'-price': Sorts by the current actual price.
+        - 'trend'/'-trend': Sorts by price volatility (growth or drop magnitude).
+        5. Defaults to sorting by creation date.
+        """
+        # Subquery to fetch the single most recent price
         latest_price = ProductPriceRecord.objects.filter(
             product=OuterRef('pk')
         ).order_by('-date').values('price')[:1]
+        # Subquery to calculate average price for the last 30 days
+        last_month = timezone.now().date() - timedelta(days=30)
+        avg_price = ProductPriceRecord.objects.filter(
+            product=OuterRef('pk'),
+            date__gte=last_month
+        ).values('product').annotate(avg=Avg('price')).values('avg')
+        # Combine subqueries and calculate the trend as a virtual field
         queryset = Product.objects.annotate(
-            latest_price=Subquery(latest_price)
+            latest_price=Subquery(latest_price),
+            avg_price_30d=Subquery(avg_price)
+        ).annotate(
+            price_trend=F('latest_price') - F('avg_price_30d')
         ).prefetch_related('price')
         ordering = self.request.query_params.get('ordering')
-        if ordering in ('price', '-price'):
+        # Unified sorting logic for price and trend fields
+        if ordering in ('price', '-price', 'trend', '-trend'):
             direction = '-' if ordering.startswith('-') else ''
-            queryset = queryset.order_by(f'{direction}latest_price')
+            field_map = {
+                'price': 'latest_price',
+                'trend': 'price_trend'
+            }
+            clean_name = ordering.lstrip('-')
+            target_field = field_map[clean_name]
+            queryset = queryset.order_by(f'{direction}{target_field}')
         else:
             queryset = queryset.order_by('-created_at')
         return queryset
