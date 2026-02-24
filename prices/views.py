@@ -1,4 +1,4 @@
-from django.db.models import Min, Max
+from django.db.models import Min, Max, OuterRef, Subquery, Avg, F
 from rest_framework import generics
 from decimal import Decimal, ROUND_HALF_UP
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from .external_apis.nbu_currency import get_rates
 from .external_apis.get_products import get_product_prices
-from .models import CurrencyRate, Product
+from .models import CurrencyRate, Product, ProductPriceRecord
 from .serializers import CurrencyRateSerializer, ProductSerializer
 
 
@@ -34,18 +34,42 @@ class CurrencyRateListView(generics.ListAPIView):
                 type=str,
                 enum=['USD', 'UAH'],
                 default='USD'
+            ),
+            OpenApiParameter(
+                name='ordering',
+                description='Sort by price',
+                required=False,
+                type=str,
+                enum=['price', '-price'],
             )
         ]
     )
 )
 class ProductListView(generics.ListAPIView):
-    queryset = Product.objects.prefetch_related('price').all().order_by('-created_at')
     serializer_class = ProductSerializer
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['currency'] = self.request.query_params.get('currency', 'USD')
         return context
+
+    def get_queryset(self):
+        latest_price = ProductPriceRecord.objects.filter(
+            product=OuterRef('pk')
+        ).order_by('-date').values('price')[:1]
+
+        queryset = Product.objects.annotate(
+            latest_price=Subquery(latest_price)
+        ).prefetch_related('price')
+
+        ordering = self.request.query_params.get('ordering')
+        if ordering in ('price', '-price'):
+            direction = '-' if ordering.startswith('-') else ''
+            queryset = queryset.order_by(f'{direction}latest_price')
+        else:
+            queryset = queryset.order_by('-created_at')
+
+        return queryset
 
 
 class ProductPriceRangeView(APIView):
