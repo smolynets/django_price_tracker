@@ -1,4 +1,6 @@
+from django.db.models import Min, Max
 from rest_framework import generics
+from decimal import Decimal, ROUND_HALF_UP
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -44,6 +46,47 @@ class ProductListView(generics.ListAPIView):
         context = super().get_serializer_context()
         context['currency'] = self.request.query_params.get('currency', 'USD')
         return context
+
+
+class ProductPriceRangeView(APIView):
+    @extend_schema(
+        tags=['Products'],
+        summary="Get min and max product prices",
+        parameters=[
+            OpenApiParameter(name='currency', type=str, enum=['USD', 'UAH'], default='USD')
+        ],
+        responses={200: {
+            "type": "object",
+            "properties": {
+                "min_price": {"type": "number", "format": "decimal", "example": 10.50},
+                "max_price": {"type": "number", "format": "decimal", "example": 500.00},
+                "currency": {"type": "string", "example": "UAH"}
+            }
+        }}
+    )
+    def get(self, request):
+        currency = request.query_params.get('currency', 'USD').upper()
+        # validate currency
+        allowed_currencies = ['USD', 'UAH']
+        if currency not in allowed_currencies:
+            raise ValidationError({"currency": f"Invalid currency. Use: {allowed_currencies}"})
+        prices = Product.objects.aggregate(
+            min_price=Min('price'),
+            max_price=Max('price')
+        )
+        min_p = Decimal(prices['min_price'] or 0).quantize(Decimal('0.01'))
+        max_p = Decimal(prices['max_price'] or 0).quantize(Decimal('0.01'))
+        # Convert if UAH is requested
+        if currency == 'UAH':
+            rate_obj = CurrencyRate.objects.filter(title="USD").order_by('-created_at').first()
+            if rate_obj:
+                min_p = (min_p * rate_obj.rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                max_p = (max_p * rate_obj.rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return Response({
+            "min_price": min_p,
+            "max_price": max_p,
+            "currency": currency
+        })
 
 
 @extend_schema_view(
