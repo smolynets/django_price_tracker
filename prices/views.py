@@ -39,7 +39,7 @@ class CurrencyRateListView(generics.ListAPIView):
     )
 )
 class ProductListView(generics.ListAPIView):
-    queryset = Product.objects.all().order_by('-created_at')
+    queryset = Product.objects.prefetch_related('price').all().order_by('-created_at')
     serializer_class = ProductSerializer
 
     def get_serializer_context(self):

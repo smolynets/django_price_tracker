@@ -1,6 +1,9 @@
 from decimal import Decimal, ROUND_HALF_UP
+from django.db.models import Avg
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from django.utils import timezone
+from datetime import timedelta
 
 from .models import CurrencyRate, Product
 
@@ -13,36 +16,44 @@ class CurrencyRateSerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
-    currency_code = serializers.SerializerMethodField()
+    trend = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ['id', 'external_id', 'title', 'description', 'price', 'currency_code', 'created_at']
+        fields = ['id', 'external_id', 'title', 'description', 'price', 'trend']
 
     def _get_validated_currency(self):
-        """
-        Internal helper to validate currency from context.
-        """
-        currency = self.context.get('currency')
-        if not currency:
-            return 'USD'
-        currency = str(currency).upper()
-        allowed = ['USD', 'UAH']
-        if currency not in allowed:
-            raise ValidationError(f"Invalid currency '{currency}'. Supported: {allowed}")
-            
-        return currency
+        return self.context.get('currency', 'USD').upper()
 
     def get_price(self, obj):
         target_currency = self._get_validated_currency()
-        if target_currency == 'USD':
-            return obj.price
+        base_price = obj.current_price
+        
+        if base_price is None:
+            return None
+
         if target_currency == 'UAH':
             rate_obj = CurrencyRate.objects.filter(title="USD").order_by('-created_at').first()
             if rate_obj:
-                result = rate_obj.rate * obj.price
+                result = rate_obj.rate * base_price
                 return result.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        return obj.price
+        
+        return base_price
+
+    def get_trend(self, obj):
+        last_month = timezone.now().date() - timedelta(days=30)
+        avg_price_data = obj.price.filter(
+            date__gte=last_month
+        ).aggregate(avg=Avg('price'))
+        avg_price = avg_price_data['avg']
+        current_price = obj.current_price
+        avg_price = Decimal(str(avg_price))
+        threshold = avg_price * Decimal('0.01')
+        if current_price > (avg_price + threshold):
+            return "up"
+        elif current_price < (avg_price - threshold):
+            return "down"
+        return "no"
 
     def get_currency_code(self, obj):
         return self._get_validated_currency()
