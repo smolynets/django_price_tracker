@@ -1,13 +1,12 @@
 import requests
 
-from tasks_app.models import Product
-
 url = "https://dummyjson.com/products"
 
 def get_product_prices():
     """
     Fetches products from the API and prints titles and prices.
     """
+    from prices.models import Product
     try:
         response = requests.get(url)
         response.raise_for_status()

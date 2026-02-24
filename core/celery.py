@@ -12,11 +12,11 @@ app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
     # 'run-daily-at-midnight': {
-    #     'task': 'tasks_app.tasks.run_daily_logic',
+    #     'task': 'prices.tasks.run_daily_logic',
     #     'schedule': crontab(hour=0, minute=0),
     # },
     'test-every-minute': {
-        'task': 'tasks_app.tasks.run_daily_logic',
+        'task': 'prices.tasks.run_daily_logic',
         'schedule': crontab(minute='*'),
     },
 }
