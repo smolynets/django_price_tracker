@@ -11,7 +11,20 @@ class CurrencyRate(models.Model):
         return f"{self.title} - {self.rate} ({self.created_at})"
 
 
+class Shop(models.Model):
+    title = models.CharField(max_length=255)
+    url = models.URLField()
+
+    def __str__(self):
+        return self.title
+
+
 class Product(models.Model):
+    shop = models.ForeignKey(
+        'Shop', 
+        on_delete=models.PROTECT, 
+        related_name='product'
+    )
     external_id = models.IntegerField(unique=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
