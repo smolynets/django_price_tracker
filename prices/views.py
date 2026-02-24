@@ -57,18 +57,15 @@ class ProductListView(generics.ListAPIView):
         latest_price = ProductPriceRecord.objects.filter(
             product=OuterRef('pk')
         ).order_by('-date').values('price')[:1]
-
         queryset = Product.objects.annotate(
             latest_price=Subquery(latest_price)
         ).prefetch_related('price')
-
         ordering = self.request.query_params.get('ordering')
         if ordering in ('price', '-price'):
             direction = '-' if ordering.startswith('-') else ''
             queryset = queryset.order_by(f'{direction}latest_price')
         else:
             queryset = queryset.order_by('-created_at')
-
         return queryset
 
 
@@ -90,22 +87,26 @@ class ProductPriceRangeView(APIView):
     )
     def get(self, request):
         currency = request.query_params.get('currency', 'USD').upper()
-        # validate currency
-        allowed_currencies = ['USD', 'UAH']
-        if currency not in allowed_currencies:
-            raise ValidationError({"currency": f"Invalid currency. Use: {allowed_currencies}"})
-        prices = Product.objects.aggregate(
-            min_price=Min('price'),
-            max_price=Max('price')
+        latest_price_subquery = ProductPriceRecord.objects.filter(
+            product=OuterRef('pk')
+        ).order_by('-date').values('price')[:1]
+        stats = Product.objects.annotate(
+            ann_current_price=Subquery(latest_price_subquery)
+        ).aggregate(
+            min_val=Min('ann_current_price'),
+            max_val=Max('ann_current_price')
         )
-        min_p = Decimal(prices['min_price'] or 0).quantize(Decimal('0.01'))
-        max_p = Decimal(prices['max_price'] or 0).quantize(Decimal('0.01'))
-        # Convert if UAH is requested
+        min_p = Decimal(str(stats['min_val'] or 0))
+        max_p = Decimal(str(stats['max_val'] or 0))
         if currency == 'UAH':
             rate_obj = CurrencyRate.objects.filter(title="USD").order_by('-created_at').first()
             if rate_obj:
-                min_p = (min_p * rate_obj.rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                max_p = (max_p * rate_obj.rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                rate = rate_obj.rate
+                min_p = (min_p * rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                max_p = (max_p * rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        else:
+            min_p = min_p.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            max_p = max_p.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         return Response({
             "min_price": min_p,
             "max_price": max_p,
