@@ -189,46 +189,31 @@ class ShopTodayAveragePriceView(APIView):
         return Response(serializer.data)
 
 
-class TodayPriceChartView(APIView):
+class PriceHistoryChartView(APIView):
     @extend_schema(
-        summary="Get today's price statistics",
-        description="Returns the average price per shop and the overall market average for the current day."
+        summary="Get historical price statistics",
+        description="Returns the daily average price per shop and the overall market average for all time."
     )
     def get(self, request):
-        """
-        Retrieves today's price statistics by calculating the average price 
-        per shop and the overall market average across all shops.
-        """
-        today = timezone.now().date()
-        today_records = ProductPriceRecord.objects.filter(date=today)
-        shop_history = []
+        # Fetch all records and group them by date and shop
+        all_records = (
+            ProductPriceRecord.objects.values('date', 'product__shop', 'product__shop__title')
+            .annotate(avg_price=Avg('price'))
+            .order_by('date')
+        )
         shops = Shop.objects.all()
+        shop_history = []
         for shop in shops:
-            # Calculate average for this shop for today
-            history = (
-                today_records.filter(product__shop=shop)
-                .values('date')
-                .annotate(avg_price=Avg('price'))
-            )
-            avg_val = history[0]['avg_price'] if history.exists() else None
+            # Filter annotated records for the specific shop
+            data = [
+                {"date": entry['date'], "price": entry['avg_price']}
+                for entry in all_records if entry['product__shop'] == shop.id
+            ]
             shop_history.append({
                 "title": shop.title,
-                "data": [{"date": today, "price": avg_val}]
+                "data": data
             })
-        # Overall average price across ALL shops for today
-        overall_history = (
-            today_records.values('date')
-            .annotate(avg_price=Avg('price'))
-        )
-        overall_avg_val = overall_history[0]['avg_price'] if overall_history.exists() else None
-        overall_data = [
-            {"date": today, "price": overall_avg_val}
-        ]
-        return Response({
-            "date": today,
-            "shops": shop_history,
-            "overall_average": overall_data
-        })
+        return Response({"shops": shop_history})
 
 
 class ProductPriceAlertCreateView(generics.CreateAPIView):
