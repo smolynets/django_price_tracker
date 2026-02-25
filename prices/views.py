@@ -9,8 +9,10 @@ from rest_framework.response import Response
 
 from .external_apis.nbu_currency import get_rates
 from .external_apis.get_products import get_product_prices
-from .models import CurrencyRate, Product, ProductPriceRecord, Shop
-from .serializers import CurrencyRateSerializer, ProductSerializer, ShopAveragePriceSerializer
+from .models import CurrencyRate, Product, ProductPriceRecord, Shop, ProductPriceAlert
+from .serializers import (
+    CurrencyRateSerializer, ProductSerializer, ShopAveragePriceSerializer, ProductPriceAlertSerializer
+)
 
 
 @extend_schema_view(
@@ -227,6 +229,18 @@ class TodayPriceChartView(APIView):
             "shops": shop_history,
             "overall_average": overall_data
         })
+
+
+class ProductPriceAlertCreateView(generics.CreateAPIView):
+    queryset = ProductPriceAlert.objects.all()
+    serializer_class = ProductPriceAlertSerializer
+
+    @extend_schema(
+        summary="Add new price alert",
+        description="Creates a notification trigger for a specific product and email.",
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
 
 # for test only!

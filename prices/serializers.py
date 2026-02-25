@@ -2,10 +2,11 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db.models import Avg
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.validators import UniqueTogetherValidator
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import CurrencyRate, Product
+from .models import CurrencyRate, Product, ProductPriceAlert
 
 class CurrencyRateSerializer(serializers.ModelSerializer):
 
@@ -63,3 +64,22 @@ class ProductSerializer(serializers.ModelSerializer):
 class ShopAveragePriceSerializer(serializers.Serializer):
     title = serializers.CharField()
     average_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class ProductPriceAlertSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductPriceAlert
+        fields = ['product', 'threshold_price', 'email']
+
+        validators = [
+            UniqueTogetherValidator(
+                queryset=ProductPriceAlert.objects.all(),
+                fields=['product', 'email'],
+                message="You already have an active alert for this product."
+            )
+        ]
+        
+    def validate_threshold_price(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Price must be greater than zero.")
+        return value
