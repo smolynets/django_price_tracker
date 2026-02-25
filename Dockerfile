@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-RUN pip install poetry==1.7.1
+RUN pip install poetry==2.1.1
 
 # Configure Poetry: do not create virtualenvs inside the container
 ENV POETRY_VIRTUALENVS_CREATE=false
