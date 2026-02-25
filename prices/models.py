@@ -38,7 +38,7 @@ class Product(models.Model):
 
     @property
     def current_price(self):
-        latest_record = self.price.first()
+        latest_record = self.price.order_by('-date').first()
         return latest_record.price if latest_record else None
 
 class ProductPriceRecord(models.Model):
@@ -53,3 +53,18 @@ class ProductPriceRecord(models.Model):
     class Meta:
         unique_together = ('product', 'date')
         ordering = ['-date']
+
+
+class ProductPriceAlert(models.Model):
+    product = models.ForeignKey(
+        'Product', 
+        on_delete=models.CASCADE, 
+        related_name='alert'
+    )
+    threshold_price = models.DecimalField(max_digits=10, decimal_places=2)
+    email = models.EmailField()
+    last_notification_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Alert for {self.product.title} (Threshold: {self.threshold_price})"

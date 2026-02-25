@@ -3,6 +3,7 @@ import logging
 
 from .external_apis.nbu_currency import get_rates
 from .external_apis.get_products import get_product_prices
+from .utils import process_price_alerts
 
 
 logger = logging.getLogger(__name__)
@@ -13,3 +14,5 @@ def run_daily_logic():
     logger.info("Currency rates retrieved")
     get_product_prices()
     logger.info("Products rates retrieved")
+    process_price_alerts()
+    logger.info("Alerts checked")
