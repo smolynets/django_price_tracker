@@ -11,12 +11,8 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    # 'run-daily-at-midnight': {
-    #     'task': 'prices.tasks.run_daily_logic',
-    #     'schedule': crontab(hour=0, minute=0),
-    # },
     'test-every-minute': {
         'task': 'prices.tasks.run_daily_logic',
-        'schedule': crontab(minute='*'),
+        'schedule': crontab(hour=0, minute=0),
     },
 }

@@ -1,16 +1,15 @@
 from celery import shared_task
 import logging
 
-# Get an instance of a logger
+from .external_apis.nbu_currency import get_rates
+from .external_apis.get_products import get_product_prices
+
+
 logger = logging.getLogger(__name__)
 
 @shared_task
 def run_daily_logic():
-    # This is the function executed by Celery Worker
-    logger.info("Task execution started...")
-    
-    # Place your business logic here
-    result = "Daily data synchronized"
-    
-    logger.info(f"Task status: {result}")
-    return result
+    get_rates()
+    logger.info("Currency rates retrieved")
+    get_product_prices()
+    logger.info("Products rates retrieved")
