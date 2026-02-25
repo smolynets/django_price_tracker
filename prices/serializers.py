@@ -15,12 +15,13 @@ class CurrencyRateSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    shop = serializers.ReadOnlyField(source='shop.title')
     price = serializers.SerializerMethodField()
     trend = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ['id', 'external_id', 'title', 'description', 'price', 'trend']
+        fields = ['id', 'external_id', 'title', 'description', 'price', 'trend', 'shop']
 
     def _get_validated_currency(self):
         return self.context.get('currency', 'USD').upper()
@@ -57,3 +58,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_currency_code(self, obj):
         return self._get_validated_currency()
+
+
+class ShopAveragePriceSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    average_price = serializers.DecimalField(max_digits=10, decimal_places=2)

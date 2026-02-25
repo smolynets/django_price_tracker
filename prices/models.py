@@ -25,10 +25,13 @@ class Product(models.Model):
         on_delete=models.PROTECT, 
         related_name='product'
     )
-    external_id = models.IntegerField(unique=True)
+    external_id = models.IntegerField()
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('shop', 'external_id')
 
     def __str__(self):
         return self.title

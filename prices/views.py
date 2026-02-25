@@ -9,8 +9,8 @@ from rest_framework.response import Response
 
 from .external_apis.nbu_currency import get_rates
 from .external_apis.get_products import get_product_prices
-from .models import CurrencyRate, Product, ProductPriceRecord
-from .serializers import CurrencyRateSerializer, ProductSerializer
+from .models import CurrencyRate, Product, ProductPriceRecord, Shop
+from .serializers import CurrencyRateSerializer, ProductSerializer, ShopAveragePriceSerializer
 
 
 @extend_schema_view(
@@ -173,6 +173,18 @@ class ProductDetailView(generics.RetrieveAPIView):
         context = super().get_serializer_context()
         context['currency'] = self.request.query_params.get('currency', 'USD')
         return context
+
+
+class ShopTodayAveragePriceView(APIView):
+    def get(self, request):
+        today = timezone.now().date()
+        shops_data = Shop.objects.filter(
+            product__price__date=today
+        ).annotate(
+            average_price=Avg('product__price__price')
+        ).values('title', 'average_price')
+        serializer = ShopAveragePriceSerializer(shops_data, many=True)
+        return Response(serializer.data)
 
 
 # for test only!
