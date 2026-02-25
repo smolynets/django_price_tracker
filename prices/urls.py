@@ -6,7 +6,8 @@ from .views import (
     ProductListView,
     ProductDetailView,
     ProductPriceRangeView,
-    ShopTodayAveragePriceView
+    ShopTodayAveragePriceView,
+    TodayPriceChartView
 )
 
 urlpatterns = [
@@ -14,7 +15,8 @@ urlpatterns = [
     path('products/', ProductListView.as_view(), name='product-list'),
     path('products/price-range/', ProductPriceRangeView.as_view(), name='product-price-range'),
     path('products/<int:pk>/', ProductDetailView.as_view(), name='product-detail'),
-    path('shops/average-today-prices/', ShopTodayAveragePriceView.as_view(), name='shop-average-prices'),
+    path('shops/average-today-prices/', ShopTodayAveragePriceView.as_view(), name='average-today-prices'),
+    path('shops/today-price-chart/', TodayPriceChartView.as_view(), name='today-price-chart'),
     # for test only!
     path('update_currencies/', UpdateCurrencyRateView.as_view(), name='currency-update'),
     path('update_products/', UpdateProductsView.as_view(), name='products-update'),

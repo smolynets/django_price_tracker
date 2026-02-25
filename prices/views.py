@@ -187,6 +187,48 @@ class ShopTodayAveragePriceView(APIView):
         return Response(serializer.data)
 
 
+class TodayPriceChartView(APIView):
+    @extend_schema(
+        summary="Get today's price statistics",
+        description="Returns the average price per shop and the overall market average for the current day."
+    )
+    def get(self, request):
+        """
+        Retrieves today's price statistics by calculating the average price 
+        per shop and the overall market average across all shops.
+        """
+        today = timezone.now().date()
+        today_records = ProductPriceRecord.objects.filter(date=today)
+        shop_history = []
+        shops = Shop.objects.all()
+        for shop in shops:
+            # Calculate average for this shop for today
+            history = (
+                today_records.filter(product__shop=shop)
+                .values('date')
+                .annotate(avg_price=Avg('price'))
+            )
+            avg_val = history[0]['avg_price'] if history.exists() else None
+            shop_history.append({
+                "title": shop.title,
+                "data": [{"date": today, "price": avg_val}]
+            })
+        # Overall average price across ALL shops for today
+        overall_history = (
+            today_records.values('date')
+            .annotate(avg_price=Avg('price'))
+        )
+        overall_avg_val = overall_history[0]['avg_price'] if overall_history.exists() else None
+        overall_data = [
+            {"date": today, "price": overall_avg_val}
+        ]
+        return Response({
+            "date": today,
+            "shops": shop_history,
+            "overall_average": overall_data
+        })
+
+
 # for test only!
 @extend_schema_view(
     get=extend_schema(tags=['Test'])
