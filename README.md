@@ -70,3 +70,7 @@ Django/DRF
 
 ##### Fow access to swagger documentation:
 	http://127.0.0.1:8000/api/docs/
+
+
+##### Email config
+    EMAIL_HOST_PASSWORD - to get it please read https://support.google.com/mail/answer/185833?hl=en-GB
