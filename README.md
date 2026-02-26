@@ -54,10 +54,16 @@ Django/DRF
 ##### For admin user creation:
 	poetry run python manage.py createsuperuser
 
+##### Celery worker (in new terminal):
+	poetry run celery -A core worker -l info
+
+##### Beat worker (in new terminal):
+    poetry run celery -A core beat -l info
+
 ##### For admin user runserver:
 	poetry run python manage.py runserver
 
-#### General:
+#### General (docker and local):
 
 ##### Fow access to admin part:
 	http://127.0.0.1:8000/admin
