@@ -1,0 +1,17 @@
+DEBUG=True
+DJANGO_SECRET_KEY=test
+
+DB_NAME=django_db
+DB_USER=user
+DB_PASSWORD=super_secret_password
+# DB_HOST=127.0.0.1 # for local development
+DB_HOST=db
+DB_PORT=5432
+
+# CELERY_BROKER_URL = f'redis://127.0.0.1:6379/0' # for local development
+# CELERY_RESULT_BACKEND = f'redis://127.0.0.1:6379/0' # for local development
+CELERY_BROKER_URL= 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+
+EMAIL_HOST_USER=example@gmail.com
+EMAIL_HOST_PASSWORD='test' # app password
