@@ -121,8 +121,10 @@ class ProductPriceRangeView(APIView):
     )
     def get(self, request):
         currency = request.query_params.get('currency', 'USD').upper()
+        # trend last day check limit
+        date_limit = timezone.now().date() - timedelta(days=30)
         latest_price_subquery = ProductPriceRecord.objects.filter(
-            product=OuterRef('pk')
+            product=OuterRef('pk'), date__gte=date_limit
         ).order_by('-date').values('price')[:1]
         stats = Product.objects.annotate(
             ann_current_price=Subquery(latest_price_subquery)
